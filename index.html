@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mapa de Válvulas — CPD | serveo Industria</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F04E12">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Válvulas CPD">
+<style>
+  :root{
+    --naranja:#F04E12; --naranja-claro:#FFF2EC; --peach:#F9C9B5;
+    --abierta:#16a34a; --cerrada:#dc2626; --pendiente:#f59e0b; --danada:#7c3aed;
+    --tinta:#1f2733; --gris:#6b7280; --linea:#e5e7eb; --fondo:#f4f5f7;
+    --panel:#ffffff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--fondo);color:var(--tinta);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header{background:var(--naranja);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .logo{font-size:20px;letter-spacing:.5px}
+  .logo b{font-weight:800}
+  .logo span{font-weight:400;opacity:.92}
+  header .titulo{font-size:13px;font-weight:600;opacity:.95;border-left:1px solid rgba(255,255,255,.4);padding-left:12px;line-height:1.2}
+  header .titulo small{display:block;font-weight:400;opacity:.8;font-size:11px}
+  .estado-wrap{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .estado-guardado,.estado-respaldo{font-size:11px;background:rgba(255,255,255,.18);padding:4px 9px;border-radius:20px;white-space:nowrap}
+  .estado-respaldo.alerta{background:#b91c1c}
+  .toolbar{background:var(--panel);border-bottom:1px solid var(--linea);padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+  .tabs{display:flex;gap:6px}
+  .tab{padding:7px 14px;border-radius:8px;border:1px solid var(--linea);background:#fff;font-weight:600;font-size:13px;cursor:pointer}
+  .tab.activa{background:var(--naranja);color:#fff;border-color:var(--naranja)}
+  .tab.resumen{border-color:var(--naranja);color:var(--naranja)}
+  .tab.resumen.activa{color:#fff}
+  .sep{flex:1}
+  .navbar{background:#fff;border-bottom:1px solid var(--linea);padding:6px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+  .nav-label{font-size:10px;font-weight:800;color:var(--gris);text-transform:uppercase;letter-spacing:.5px}
+  .nav-group{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+  .nav-sep{width:1px;height:22px;background:var(--linea);margin:0 4px}
+  .rchip,.nchip{padding:5px 11px;border-radius:7px;border:1px solid var(--linea);background:#fff;font-weight:700;font-size:12px;cursor:pointer;color:var(--tinta)}
+  .rchip.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+  .nchip.on{background:var(--naranja);color:#fff;border-color:var(--naranja)}
+  .rchip .badge,.nchip .badge{opacity:.6;font-weight:600;font-size:11px}
+  .tab.add{border-style:dashed;color:var(--gris)}
+  .btn.mini{padding:5px 9px;font-size:13px;line-height:1}
+  .btn{padding:7px 12px;border-radius:8px;border:1px solid var(--linea);background:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .btn:hover{background:#f6f6f6}
+  .btn.primario{background:var(--naranja);color:#fff;border-color:var(--naranja)}
+  .btn.primario:hover{filter:brightness(.95)}
+  .contadores{display:flex;gap:6px;font-size:11px;align-items:center;flex-wrap:wrap}
+  .pill{padding:3px 9px;border-radius:20px;font-weight:700;color:#fff}
+  .pill.a{background:var(--abierta)} .pill.c{background:var(--cerrada)} .pill.p{background:var(--pendiente)} .pill.d{background:var(--danada)}
+  .cuerpo{flex:1;display:flex;min-height:0}
+  .lienzo-wrap{flex:1;position:relative;overflow:auto;background:#dde1e6;padding:10px}
+  .lienzo-scroll{min-width:100%;min-height:100%}
+  .lienzo{position:relative;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.12);width:100%;margin:0 auto}
+  .lienzo.placing{cursor:crosshair}
+  .lienzo img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+  .plano-canvas{display:block;width:100%;height:auto;user-select:none}
+  .sin-plano{width:min(92vw,640px);aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--gris);text-align:center;padding:24px;border:2px dashed #b8c0cc;background:#fff;margin:0 auto}
+  .sin-plano b{color:var(--tinta);font-size:15px}
+  .zoom-ctrl{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:4px;z-index:6}
+  .zoom-ctrl button{width:36px;height:36px;border-radius:8px;border:1px solid var(--linea);background:#fff;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+  .zoom-ctrl button:hover{background:#f3f4f6}
+  .zoom-nivel{font-size:10px;text-align:center;background:#fff;border-radius:6px;padding:2px 0;border:1px solid var(--linea)}
+  .marcador{position:absolute;width:22px;height:22px;border-radius:50%;border:2.5px solid #fff;transform:translate(-50%,-50%);cursor:grab;touch-action:none;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff}
+  .marcador.arrastrando{cursor:grabbing;z-index:7;outline:3px solid var(--naranja);outline-offset:2px}
+  .marcador.abierta{background:var(--abierta)} .marcador.cerrada{background:var(--cerrada)} .marcador.pendiente{background:var(--pendiente)} .marcador.danada{background:var(--danada)}
+  .marcador.sel{outline:3px solid var(--naranja);outline-offset:2px;z-index:5}
+  .marcador .tip{position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s}
+  .marcador:hover .tip{opacity:1}
+  .panel{width:330px;background:var(--panel);border-left:1px solid var(--linea);display:flex;flex-direction:column;flex-shrink:0}
+  .panel-cab{background:var(--naranja);color:#fff;padding:9px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+  .panel-cab .x{cursor:pointer;font-size:16px;line-height:1}
+  .panel-scroll{overflow-y:auto;padding:14px;flex:1}
+  .buscador{width:100%;padding:8px 10px;border:1px solid var(--linea);border-radius:8px;font-size:13px;margin-bottom:8px}
+  .filtros{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+  .fchip{padding:4px 9px;border-radius:20px;border:1px solid var(--linea);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gris)}
+  .fchip.on{color:#fff;border-color:transparent}
+  .fchip.on.todas{background:var(--tinta)} .fchip.on.abierta{background:var(--abierta)} .fchip.on.cerrada{background:var(--cerrada)} .fchip.on.pendiente{background:var(--pendiente)} .fchip.on.danada{background:var(--danada)}
+  .campo{margin-bottom:11px}
+  .campo label{display:block;font-size:11px;font-weight:700;color:var(--gris);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+  .campo input,.campo select,.campo textarea{width:100%;padding:8px 10px;border:1px solid var(--linea);border-radius:8px;font-size:13px;font-family:inherit;background:#fff}
+  .campo textarea{resize:vertical;min-height:56px}
+  .campo-row{display:flex;gap:8px}.campo-row .campo{flex:1}
+  .acciones-edit{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+  .lista-item{padding:9px 10px;border:1px solid var(--linea);border-radius:8px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:8px;background:#fff}
+  .lista-item:hover{background:var(--naranja-claro)}
+  .lista-item.sel{border-color:var(--naranja);background:var(--naranja-claro)}
+  .punto{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+  .punto.abierta{background:var(--abierta)} .punto.cerrada{background:var(--cerrada)} .punto.pendiente{background:var(--pendiente)} .punto.danada{background:var(--danada)}
+  .lista-item .meta{font-size:11px;color:var(--gris)}
+  .lista-item .cod{font-weight:700;font-size:13px}
+  .vacio-lista{color:var(--gris);font-size:12px;text-align:center;padding:20px 0}
+  .seccion-titulo{font-size:11px;font-weight:800;color:var(--naranja);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--peach)}
+  /* agrupación por airblock en el panel */
+  .ab-acciones{display:flex;gap:6px;margin-bottom:8px}
+  .ab-grupo{margin-bottom:8px;border:1px solid var(--linea);border-radius:9px;overflow:hidden}
+  .ab-cab{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--naranja-claro);cursor:pointer;font-size:12px}
+  .ab-cab .ab-nom{flex:1;color:var(--tinta);font-weight:800}
+  .ab-caret{font-size:10px;color:var(--gris);transition:transform .12s}
+  .ab-cab.colap .ab-caret{transform:rotate(-90deg)}
+  .ab-cnt{font-size:11px;color:var(--gris);font-weight:700}
+  .ab-bar{width:54px;height:7px;border-radius:5px;background:var(--linea);overflow:hidden;display:flex;flex-shrink:0}
+  .ab-bar i{display:block;height:100%}
+  .ab-sc{font-size:10px;color:#fff;background:var(--pendiente);font-weight:700;white-space:nowrap;padding:1px 6px;border-radius:10px}
+  .ab-items{padding:7px 7px 2px}
+  .ab-items .lista-item{margin-bottom:5px}
+  .tag-sc{display:inline-block;font-size:9px;font-weight:700;color:#fff;background:var(--gris);padding:1px 6px;border-radius:10px;vertical-align:middle;margin-left:4px}
+  .aviso-colocar{background:var(--naranja);color:#fff;padding:8px 12px;font-size:12px;font-weight:600;text-align:center;display:none}
+  .aviso-colocar.on{display:block}
+  /* Resumen */
+  .resumen-wrap{flex:1;overflow:auto;padding:22px;background:var(--fondo)}
+  .res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+  .res-card{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  .res-card .num{font-size:30px;font-weight:800;line-height:1}
+  .res-card .lab{font-size:12px;color:var(--gris);font-weight:600;margin-top:4px;text-transform:uppercase;letter-spacing:.3px}
+  .res-card.a .num{color:var(--abierta)} .res-card.c .num{color:var(--cerrada)} .res-card.p .num{color:var(--pendiente)} .res-card.d .num{color:var(--danada)}
+  .res-bloque{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:18px;margin-bottom:18px}
+  .res-bloque h3{margin:0 0 12px;font-size:14px}
+  .res-tabla{width:100%;border-collapse:collapse;font-size:13px}
+  .res-tabla th,.res-tabla td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--linea)}
+  .res-tabla th{font-size:11px;text-transform:uppercase;color:var(--gris);letter-spacing:.3px}
+  .barra{height:8px;border-radius:6px;background:var(--linea);overflow:hidden;display:flex}
+  .barra i{display:block;height:100%}
+  .tag-est{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff}
+  .tag-est.abierta{background:var(--abierta)}.tag-est.cerrada{background:var(--cerrada)}.tag-est.pendiente{background:var(--pendiente)}.tag-est.danada{background:var(--danada)}
+  @media(max-width:760px){
+    .cuerpo{flex-direction:column}
+    .panel{width:100%;border-left:none;border-top:1px solid var(--linea);max-height:46%}
+    .lienzo-wrap{padding:6px}
+    header .titulo{display:none}
+    .res-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  input[type=file]{display:none}
+  /* modal plantilla */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal{background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 44px rgba(0,0,0,.32)}
+  .modal-cab{background:var(--naranja);color:#fff;padding:11px 16px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  .modal-cab .x{cursor:pointer;font-size:18px;line-height:1}
+  .modal-body{padding:16px;overflow:auto}
+  .modal-pie{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+  .hint{font-size:12px;color:var(--gris);margin:0 0 12px;line-height:1.45}
+  .preview{position:relative;width:190px;height:190px;border:1px dashed #b8c0cc;border-radius:10px;margin:0 auto 16px;background:#fafbfc}
+  .preview .centro{position:absolute;left:50%;top:50%;width:7px;height:7px;background:var(--naranja);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(240,78,18,.18)}
+  .preview .pt{position:absolute;width:22px;height:22px;border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .pl-fila{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:9px;border:1px solid var(--linea);border-radius:9px;margin-bottom:8px;background:#fff}
+  .pl-c{display:flex;flex-direction:column;gap:3px}
+  .pl-c label{font-size:9px;font-weight:800;color:var(--gris);text-transform:uppercase;letter-spacing:.3px}
+  .pl-c input,.pl-c select{padding:6px 7px;border:1px solid var(--linea);border-radius:6px;font-size:12px;font-family:inherit;background:#fff}
+  .pl-c.cod input{width:118px}.pl-c.cir input{width:120px}.pl-c.tipo select{width:124px}.pl-c.dn input{width:62px}.pl-c.num input{width:52px}
+  .pl-del{color:var(--cerrada);border:1px solid var(--cerrada);background:#fff;border-radius:6px;cursor:pointer;padding:7px 9px;font-weight:700;height:32px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><b>serveo</b> <span>Industria</span></div>
+  <div class="titulo">Mapa de Válvulas — CPD<small>Control de circuitos de glicol</small></div>
+  <div class="estado-wrap">
+    <div class="estado-respaldo" id="estadoRespaldo"></div>
+    <div class="estado-guardado" id="estadoGuardado">Guardado ✓</div>
+  </div>
+</header>
+
+<div class="navbar">
+  <span class="nav-label">Riser</span>
+  <div class="nav-group" id="navRisers"></div>
+  <div class="nav-sep"></div>
+  <span class="nav-label">Nivel</span>
+  <div class="nav-group" id="navNiveles"></div>
+  <div class="sep"></div>
+  <button class="tab resumen" id="btnResumen" onclick="abrirResumen()">📊 Resumen</button>
+</div>
+
+<div class="toolbar">
+  <div class="tabs" id="tabs"></div>
+  <div class="sep"></div>
+  <div class="contadores" id="contadores"></div>
+  <label class="btn" for="filePlano">📐 Cargar plano</label>
+  <input type="file" id="filePlano" accept="image/*">
+  <button class="btn" id="btnAirblock" title="Crear las válvulas de un airblock con un toque">🧊 Airblock</button>
+  <button class="btn" id="btnPlantilla" title="Personalizar la plantilla de airblock">⚙</button>
+  <button class="btn" id="btnCSV">📄 CSV</button>
+  <label class="btn" for="fileImport">📥 Importar</label>
+  <input type="file" id="fileImport" accept=".json,application/json">
+  <button class="btn primario" id="btnExport">💾 Respaldo</button>
+</div>
+
+<div class="aviso-colocar" id="avisoColocar">Toca en el plano dónde va la válvula… (puedes hacer zoom para más precisión)</div>
+
+<div class="cuerpo" id="cuerpo">
+  <div class="lienzo-wrap" id="lienzoWrap">
+    <div class="lienzo-scroll"><div class="lienzo" id="lienzo"></div></div>
+    <div class="zoom-ctrl" id="zoomCtrl">
+      <button id="zMas" title="Acercar">+</button>
+      <div class="zoom-nivel" id="zNivel">100%</div>
+      <button id="zMenos" title="Alejar">−</button>
+      <button id="zReset" title="Ajustar" style="font-size:13px">⤢</button>
+      <button id="rotCW" title="Rotar 90° (horario)" style="font-size:15px">↻</button>
+      <button id="rotCCW" title="Rotar 90° (antihorario)" style="font-size:15px">↺</button>
+    </div>
+  </div>
+  <div class="panel" id="panelLat">
+    <div class="panel-cab"><span id="panelTitulo">Válvulas</span><span class="x" id="cerrarEdit" style="display:none">✕</span></div>
+    <div class="panel-scroll" id="panelScroll"></div>
+  </div>
+</div>
+
+<div class="resumen-wrap" id="resumenWrap" style="display:none"></div>
+
+<div class="modal-bg" id="plantillaModal" style="display:none">
+  <div class="modal">
+    <div class="modal-cab"><span>🧊 Plantilla de airblock</span><span class="x" id="plantillaX">✕</span></div>
+    <div class="modal-body">
+      <p class="hint">Define qué válvulas se crean al sellar un airblock 🧊 y dónde se colocan respecto al punto que tocas. El punto naranja del previo es el lugar que tocas; la <b>X</b> y la <b>Y</b> son la separación en % (negativo = izquierda/arriba).<br>
+      <b>Más fácil:</b> coloca un airblock a mano en el plano (arrastrando los marcadores) y pulsa «🧊 Guardar este airblock como plantilla» en el panel de una de sus válvulas — así defines la disposición viéndola sobre el mapa.</p>
+      <div class="preview" id="plantillaPreview"></div>
+      <div id="plantillaFilas"></div>
+      <button class="btn" id="plantillaAdd" style="margin-top:4px">＋ Añadir válvula</button>
+      <div class="modal-pie">
+        <button class="btn" id="plantillaReset">↩ Restaurar por defecto</button>
+        <button class="btn primario" id="plantillaGuardar">Guardar plantilla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SEED_SECCIONES = {"sec201": {"valvulas": [{"id": "51cepf8", "codigo": "R-A PPR63", "unidad": "DH1.201", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6267948575663569, "y": 0.11168348465736096, "notas": ""}, {"id": "3vj57or", "codigo": "R-B PPR63", "unidad": "DH1.201", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6267948575663569, "y": 0.1265293725770308, "notas": ""}, {"id": "44nnpcc", "codigo": "S-A PPR63", "unidad": "DH1.201", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6244916469055722, "y": 0.19075864693647954, "notas": ""}, {"id": "sfhgzua", "codigo": "S-B PPR63", "unidad": "DH1.201", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6250400678746406, "y": 0.17591706129224108, "notas": ""}, {"id": "mutl0rc", "codigo": "PPR63 BELIMO", "unidad": "DH1.201", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.48479320807134285, "y": 0.1084271794960322, "notas": ""}, {"id": "eq0pdrd", "codigo": "R-A PPR63", "unidad": "DH1.202", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6259027778616151, "y": 0.21435888073236017, "notas": ""}, {"id": "dzyopor", "codigo": "R-B PPR63", "unidad": "DH1.202", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6250317311345147, "y": 0.2290501385680553, "notas": ""}, {"id": "o4irx8l", "codigo": "S-A PPR63", "unidad": "DH1.202", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6242341091008105, "y": 0.2948606954852408, "notas": ""}, {"id": "hngawfi", "codigo": "S-B PPR63", "unidad": "DH1.202", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6236743699812645, "y": 0.2789606061206367, "notas": ""}, {"id": "x3wwh54", "codigo": "PPR63 BELIMO", "unidad": "DH1.202", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.48130902116294105, "y": 0.21178146707697507, "notas": ""}, {"id": "4fjg2s9", "codigo": "R-A PPR63", "unidad": "DH1.204", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6199991805926114, "y": 0.4230885543394385, "notas": ""}, {"id": "bxjylou", "codigo": "R-B PPR63", "unidad": "DH1.204", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6188797023535193, "y": 0.4376668463394233, "notas": ""}, {"id": "lbx9wlg", "codigo": "S-A PPR63", "unidad": "DH1.204", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6177575119655745, "y": 0.5022689845892057, "notas": ""}, {"id": "thizkx1", "codigo": "S-B PPR63", "unidad": "DH1.204", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6177575119655745, "y": 0.48702658382447983, "notas": ""}, {"id": "siygojg", "codigo": "PPR63 BELIMO", "unidad": "DH1.204", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4773681903330779, "y": 0.42116836831003546, "notas": ""}, {"id": "29z2fl6", "codigo": "R-A PPR63", "unidad": "DH1.206", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6117325000306391, "y": 0.6697174279047245, "notas": ""}, {"id": "1knlk81", "codigo": "R-B PPR63", "unidad": "DH1.206", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6121903174366883, "y": 0.6849887456017517, "notas": ""}, {"id": "vlf5cxb", "codigo": "S-A PPR63", "unidad": "DH1.206", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6100614191185594, "y": 0.7501512521181859, "notas": ""}, {"id": "miq1v7m", "codigo": "S-B PPR63", "unidad": "DH1.206", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6106184460892526, "y": 0.7346578515524782, "notas": ""}, {"id": "84lv65l", "codigo": "PPR63 BELIMO", "unidad": "DH1.206", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4702476494745575, "y": 0.6693877810841776, "notas": ""}, {"id": "lvk933y", "codigo": "R-A PPR63", "unidad": "DH1.208", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6070135218055951, "y": 0.8757033599310395, "notas": ""}, {"id": "d6yyb94", "codigo": "R-B PPR63", "unidad": "DH1.208", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6064756579371982, "y": 0.8903454431297023, "notas": ""}, {"id": "c0czp9w", "codigo": "S-A PPR63", "unidad": "DH1.208", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6052514804421673, "y": 0.9539534849886228, "notas": ""}, {"id": "3y5ml0a", "codigo": "S-B PPR63", "unidad": "DH1.208", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6047136165737704, "y": 0.9389930956334673, "notas": ""}, {"id": "hh5c5l2", "codigo": "PPR63 BELIMO", "unidad": "DH1.208", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.46433114692219224, "y": 0.8756501704914265, "notas": ""}, {"codigo": "CHWR-B PPR125", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno B Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "flf0973"}, {"codigo": "CHWR-A PPR125", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno A Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "etr43t4"}, {"codigo": "CHWS-A PPR125", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro A Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "0sequh3"}, {"codigo": "CHWS-B PPR125", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro B Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "4lrrcm6"}, {"codigo": "DN125 Aislamiento 1", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "rf6ybtn"}, {"codigo": "DN125 Aislamiento 2", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "xzblqtk"}]}, "sec209": {"valvulas": [{"id": "u7pnnrn", "codigo": "R-A PPR63", "unidad": "DH1.209", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6094456822018562, "y": 0.11241255187631333, "notas": ""}, {"id": "24uk54q", "codigo": "R-B PPR63", "unidad": "DH1.209", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6086056488630732, "y": 0.12408781713959013, "notas": ""}, {"id": "mbhhq28", "codigo": "S-A PPR63", "unidad": "DH1.209", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6094456822018562, "y": 0.1779886251050514, "notas": ""}, {"id": "9k94cna", "codigo": "S-B PPR63", "unidad": "DH1.209", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6090256655324647, "y": 0.16553500882422278, "notas": ""}, {"id": "uzxgnue", "codigo": "PPR63 BELIMO", "unidad": "DH1.209", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4594997312290754, "y": 0.11007749882365796, "notas": ""}, {"id": "tn1j4q5", "codigo": "R-A PPR63", "unidad": "DH1.211", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6098656988712479, "y": 0.3570093591419624, "notas": ""}, {"id": "ct0njsn", "codigo": "R-B PPR63", "unidad": "DH1.211", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6102857155406394, "y": 0.3690737999140151, "notas": ""}, {"id": "i6sauxl", "codigo": "S-A PPR63", "unidad": "DH1.211", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6111257488794224, "y": 0.42161249359876074, "notas": ""}, {"id": "t1z153x", "codigo": "S-B PPR63", "unidad": "DH1.211", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6107057322100309, "y": 0.409742640581096, "notas": ""}, {"id": "087q9o8", "codigo": "PPR63 BELIMO", "unidad": "DH1.211", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4636998979229908, "y": 0.3564255958787986, "notas": ""}, {"id": "59jetsl", "codigo": "R-A PPR63", "unidad": "DH1.213", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.612385798887597, "y": 0.6632904845485906, "notas": ""}, {"id": "kp4bmrs", "codigo": "R-B PPR63", "unidad": "DH1.213", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6119657822182055, "y": 0.6743819865487036, "notas": ""}, {"id": "knviqtw", "codigo": "S-A PPR63", "unidad": "DH1.213", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.612385798887597, "y": 0.724196451672018, "notas": ""}, {"id": "nskl2sl", "codigo": "S-B PPR63", "unidad": "DH1.213", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6128058155569887, "y": 0.7127157741631291, "notas": ""}, {"id": "3mm7dqo", "codigo": "PPR63 BELIMO", "unidad": "DH1.213", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4704201646332555, "y": 0.6652363620924701, "notas": ""}, {"id": "f8rqarr", "codigo": "R-A PPR63", "unidad": "DH1.215", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6132258322263802, "y": 0.8187661003045602, "notas": ""}, {"id": "wufn5zp", "codigo": "R-B PPR63", "unidad": "DH1.215", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6136458488957717, "y": 0.8294684267958973, "notas": ""}, {"id": "qb71lkt", "codigo": "S-A PPR63", "unidad": "DH1.215", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6140658655651633, "y": 0.8765586633577804, "notas": ""}, {"id": "gz6f348", "codigo": "S-B PPR63", "unidad": "DH1.215", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6132258322263802, "y": 0.8658563368664434, "notas": ""}, {"id": "irgmhf0", "codigo": "PPR63 BELIMO", "unidad": "DH1.215", "tipo": "Mariposa", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4733602813189962, "y": 0.821468262233237, "notas": ""}, {"id": "gut1zkk", "codigo": "R-A PPR63", "unidad": "DH1.216", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6134497617067517, "y": 0.8936075390900126, "notas": ""}, {"id": "6qoocc6", "codigo": "R-B PPR63", "unidad": "DH1.216", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6131808910242913, "y": 0.9041954762395161, "notas": ""}, {"id": "q1lac3t", "codigo": "S-A PPR63", "unidad": "DH1.216", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6145252444365933, "y": 0.9510315276302611, "notas": ""}, {"id": "iswq82r", "codigo": "S-B PPR63", "unidad": "DH1.216", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6142563737541329, "y": 0.9400698985813634, "notas": ""}, {"id": "h9nzd89", "codigo": "PPR63 BELIMO", "unidad": "DH1.216", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4752502309221084, "y": 0.8973444580839549, "notas": ""}, {"codigo": "CHWS-B PPR200", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro B Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "1nzoxd8"}, {"codigo": "CHWS-A PPR200", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro A Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "4w7j109"}, {"codigo": "CHWR-B PPR200", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno B Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "ws8myd2"}, {"codigo": "CHWR-A PPR200", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno A Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "81d0lls"}, {"codigo": "Bypass Electroválvula A", "unidad": "Bypass", "tipo": "Electroválvula", "circuito": "Bypass A", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "ogzjerk"}, {"codigo": "Bypass Electroválvula B", "unidad": "Bypass", "tipo": "Electroválvula", "circuito": "Bypass B", "dn": "DN125", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "m7o4t6h"}, {"codigo": "LLENADO/VACIADO A", "unidad": "Llenado", "tipo": "Globo", "circuito": "Llenado A", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "5t27u99"}, {"codigo": "LLENADO/VACIADO B", "unidad": "Llenado", "tipo": "Globo", "circuito": "Llenado B", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "0d7icga"}, {"codigo": "DN200 Aislamiento 1", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "lnypdrk"}, {"codigo": "DN200 Aislamiento 2", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN200", "estado": "pendiente", "x": null, "y": null, "notas": "", "id": "wqbtw0g"}, {"id": "m890hhy", "codigo": "NUEVA", "unidad": "", "tipo": "Bola", "circuito": "", "dn": "DN63", "estado": "pendiente", "x": null, "y": null, "notas": ""}, {"id": "xbk7ctu", "codigo": "NUEVA", "unidad": "", "tipo": "Bola", "circuito": "", "dn": "DN63", "estado": "pendiente", "x": null, "y": null, "notas": ""}]}, "sec217": {"valvulas": [{"id": "rqne7u6", "codigo": "R-A PPR63", "unidad": "DH1.217", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6152021579304335, "y": 0.06349053932404185, "notas": ""}, {"id": "djq2s4z", "codigo": "R-B PPR63", "unidad": "DH1.217", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6166545670089576, "y": 0.07867768642773865, "notas": ""}, {"id": "1lw9phx", "codigo": "S-A PPR63", "unidad": "DH1.217", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6185911124469896, "y": 0.14555442191945608, "notas": ""}, {"id": "8fkbgag", "codigo": "S-B PPR63", "unidad": "DH1.217", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6166545670089576, "y": 0.13010083363850145, "notas": ""}, {"id": "s575m1e", "codigo": "PPR63 BELIMO", "unidad": "DH1.217", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4578578410903317, "y": 0.061092568728721305, "notas": ""}, {"id": "60k7vy5", "codigo": "R-A PPR63", "unidad": "DH1.218", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "cerrada", "x": 0.6149595934664394, "y": 0.1707356074552639, "notas": ""}, {"id": "cbplp1n", "codigo": "R-B PPR63", "unidad": "DH1.218", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "cerrada", "x": 0.6161665046790649, "y": 0.18628010198753367, "notas": ""}, {"id": "p9euxf9", "codigo": "S-A PPR63", "unidad": "DH1.218", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6170550377488329, "y": 0.2532728522146533, "notas": ""}, {"id": "s3ka1nl", "codigo": "S-B PPR63", "unidad": "DH1.218", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6170550377488329, "y": 0.23713591237892373, "notas": ""}, {"id": "4kfd5nz", "codigo": "PPR63 BELIMO", "unidad": "DH1.218", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4585862201892146, "y": 0.16783778154391515, "notas": ""}, {"id": "9c1sfx0", "codigo": "R-A PPR63", "unidad": "DH1.219", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6154265354987839, "y": 0.2768734574293333, "notas": ""}, {"id": "2asnew5", "codigo": "R-B PPR63", "unidad": "DH1.219", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6164603482799467, "y": 0.29308858615996136, "notas": ""}, {"id": "wru68ba", "codigo": "S-A PPR63", "unidad": "DH1.219", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6143927227176212, "y": 0.360509384566257, "notas": ""}, {"id": "s6ghd67", "codigo": "S-B PPR63", "unidad": "DH1.219", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6174941610611093, "y": 0.3448632077209141, "notas": ""}, {"id": "1po0vin", "codigo": "PPR63 BELIMO", "unidad": "DH1.219", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4582869927620529, "y": 0.2765889814866907, "notas": ""}, {"id": "s8tsg7n", "codigo": "R-A PPR63", "unidad": "DH1.220", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6154265354987839, "y": 0.38525879157616294, "notas": ""}, {"id": "fsncpw6", "codigo": "R-B PPR63", "unidad": "DH1.220", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6149096291082026, "y": 0.40033601653622064, "notas": ""}, {"id": "18uzak8", "codigo": "S-A PPR63", "unidad": "DH1.220", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6159434418893652, "y": 0.46690338711458845, "notas": ""}, {"id": "zyepjg0", "codigo": "S-B PPR63", "unidad": "DH1.220", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6164603482799467, "y": 0.450972734326603, "notas": ""}, {"id": "drwggjc", "codigo": "PPR63 BELIMO", "unidad": "DH1.220", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.45932080554321564, "y": 0.38525879157616294, "notas": ""}, {"id": "ao46tdb", "codigo": "R-A PPR63", "unidad": "DH1.221", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6143927227176212, "y": 0.5329018058076711, "notas": ""}, {"id": "hbsb9bm", "codigo": "R-B PPR63", "unidad": "DH1.221", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6143927227176212, "y": 0.5479790307677288, "notas": ""}, {"id": "nc2jijd", "codigo": "S-A PPR63", "unidad": "DH1.221", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6149096291082026, "y": 0.6136929735181688, "notas": ""}, {"id": "gprwq5d", "codigo": "S-B PPR63", "unidad": "DH1.221", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6149096291082026, "y": 0.5983312726154686, "notas": ""}, {"id": "n2m5bgx", "codigo": "PPR63 BELIMO", "unidad": "DH1.221", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.45932080554321564, "y": 0.5334707576929563, "notas": ""}, {"id": "p74cf7c", "codigo": "R-A PPR63", "unidad": "DH1.222", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.614414510267193, "y": 0.6386414675701136, "notas": ""}, {"id": "sir4fri", "codigo": "R-B PPR63", "unidad": "DH1.222", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6150591123255311, "y": 0.6531863156164368, "notas": ""}, {"id": "9k9m5pn", "codigo": "S-A PPR63", "unidad": "DH1.222", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6157037143838693, "y": 0.7191702604119514, "notas": ""}, {"id": "hbosqhk", "codigo": "S-B PPR63", "unidad": "DH1.222", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.614414510267193, "y": 0.7039159075828808, "notas": ""}, {"id": "m8p3vkc", "codigo": "PPR63 BELIMO", "unidad": "DH1.222", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.4603546183243783, "y": 0.6393509723528612, "notas": ""}, {"id": "iyp45n8", "codigo": "R-A PPR63", "unidad": "DH1.223", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.6137699082088548, "y": 0.7432934230253653, "notas": ""}, {"id": "izt6kq0", "codigo": "R-B PPR63", "unidad": "DH1.223", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6137699082088548, "y": 0.7581930234630622, "notas": ""}, {"id": "t6on57k", "codigo": "S-A PPR63", "unidad": "DH1.223", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6137699082088548, "y": 0.8216937015189606, "notas": ""}, {"id": "i3nycvl", "codigo": "S-B PPR63", "unidad": "DH1.223", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.6137699082088548, "y": 0.8067941010812637, "notas": ""}, {"id": "1i15y86", "codigo": "PPR63 BELIMO", "unidad": "DH1.223", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.459065414207702, "y": 0.7443576801994866, "notas": ""}, {"id": "j9rm8ik", "codigo": "R-A PPR63", "unidad": "DH1.224", "tipo": "Bola", "circuito": "Retorno A", "dn": "DN63", "estado": "abierta", "x": 0.613802595406385, "y": 0.8455611427115958, "notas": ""}, {"id": "pzp2ax2", "codigo": "R-B PPR63", "unidad": "DH1.224", "tipo": "Bola", "circuito": "Retorno B", "dn": "DN63", "estado": "abierta", "x": 0.6144602854975372, "y": 0.8596773994849614, "notas": ""}, {"id": "dvpuyou", "codigo": "S-A PPR63", "unidad": "DH1.224", "tipo": "Bola", "circuito": "Suministro A", "dn": "DN63", "estado": "abierta", "x": 0.6144602854975372, "y": 0.9237434879179284, "notas": ""}, {"id": "kidgp3c", "codigo": "S-B PPR63", "unidad": "DH1.224", "tipo": "Bola", "circuito": "Suministro B", "dn": "DN63", "estado": "abierta", "x": 0.613144905315233, "y": 0.9085413652389193, "notas": ""}, {"id": "rfenuov", "codigo": "PPR63 BELIMO", "unidad": "DH1.224", "tipo": "Electroválvula", "circuito": "Principal", "dn": "DN63", "estado": "pendiente", "x": 0.45990311407680246, "y": 0.8480948298247639, "notas": ""}, {"codigo": "CHWS-B PPR160", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro B Header", "dn": "DN125", "estado": "abierta", "x": 0.17457507131784222, "y": 0.5848035722318359, "notas": "", "id": "8g8nthw"}, {"codigo": "CHWS-A PPR160", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro A Header", "dn": "DN125", "estado": "abierta", "x": 0.1480800605386998, "y": 0.5842994363743285, "notas": "", "id": "dw28dbv"}, {"codigo": "CHWR-A PPR160", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno A Header", "dn": "DN125", "estado": "abierta", "x": 0.09601835993571316, "y": 0.5834536017803345, "notas": "", "id": "mryondq"}, {"codigo": "CHWR-B PPR160", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno B Header", "dn": "DN125", "estado": "abierta", "x": 0.12171620631403904, "y": 0.5834031495730492, "notas": "", "id": "65p2j3z"}, {"codigo": "DN125 Aislamiento 1 S-A", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN125", "estado": "cerrada", "x": 0.6585255216047253, "y": 0.957043375690996, "notas": "", "id": "7iotpb0"}, {"codigo": "DN125 Aislamiento 2 R-A", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Aislamiento Header", "dn": "DN125", "estado": "cerrada", "x": 0.7068829641080229, "y": 0.9567489777949996, "notas": "", "id": "n2vdd8v"}, {"id": "2pdhmir", "codigo": "DN125 CHWS-A_DP-PC", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro A Header", "dn": "", "estado": "abierta", "x": 0.6860103757939195, "y": 0.03150501933209489, "notas": ""}, {"id": "4z3d1cy", "codigo": "DN125 CHWS-B_DP-PC", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro B Header", "dn": "", "estado": "abierta", "x": 0.6620159917507805, "y": 0.031213630153580457, "notas": ""}, {"id": "ly6u0na", "codigo": "DN125 CHWR-B_DP-PC", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno B Header", "dn": "", "estado": "abierta", "x": 0.7344447704436148, "y": 0.03352439475751726, "notas": ""}, {"id": "qy1y0cp", "codigo": "DN125 CHWR-A_DP-PC", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno A Header", "dn": "", "estado": "abierta", "x": 0.7097769979902582, "y": 0.03294670360653306, "notas": ""}, {"id": "rm7ik7i", "codigo": "CHWS-B_PPR160", "unidad": "Bajante L1", "tipo": "Mariposa", "circuito": "Header Principal", "dn": "", "estado": "abierta", "x": 0.17551002369003316, "y": 0.6532380208658951, "notas": ""}, {"id": "7skw5hp", "codigo": "CHWS-A_PPR160", "unidad": "Bajante L1", "tipo": "Mariposa", "circuito": "Header Principal", "dn": "", "estado": "abierta", "x": 0.14807786883759208, "y": 0.6527842623580924, "notas": ""}, {"id": "ywk9ali", "codigo": "DN125 Aislamiento 1 S-A", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro A Header", "dn": "DN125", "estado": "abierta", "x": 0.682664450803877, "y": 0.5011706787145812, "notas": ""}, {"id": "u4vzbl0", "codigo": "DN125 Aislamiento S-B", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Suministro B Header", "dn": "DN125", "estado": "abierta", "x": 0.6588088073704967, "y": 0.5019912282348512, "notas": ""}, {"id": "aokjjpd", "codigo": "DN125 Aislamiento R-A", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno A Header", "dn": "DN125", "estado": "abierta", "x": 0.7080110719518438, "y": 0.5019912282348512, "notas": ""}, {"id": "2bj5iuq", "codigo": "DN125 Aislamiento R-B", "unidad": "Header Principal", "tipo": "Mariposa", "circuito": "Retorno B Header", "dn": "DN125", "estado": "abierta", "x": 0.7333576930998104, "y": 0.5019912282348512, "notas": ""}]}};
+const TIPOS=["Bola","Mariposa","Globo","Electroválvula","Compuerta","Retención","Otro"];
+const ESTADOS=["abierta","cerrada","danada","pendiente"];
+const ESTADO_LABEL={abierta:"Abierta",cerrada:"Cerrada",danada:"Dañada",pendiente:"Pendiente"};
+const RISERS=[["R1","Riser 1"],["R2","Riser 2"],["R3","Riser 3"],["R4","Riser 4"]];
+const NIVELES=["L1","L2","L3","Roof"];
+const EXT=["jpg","jpeg","png","JPG","JPEG","PNG"];
+const KEY_DATA="cpd_valvulas_data_v2", KEY_DATA_OLD="cpd_valvulas_data", KEY_PLANOS="cpd_valvulas_planos", KEY_BK="cpd_ultimo_respaldo";
+
+function rNom(r){return (RISERS.find(x=>x[0]===r)||[,r])[1]}
+function estructuraVacia(){
+  const o={};
+  RISERS.forEach(([r])=>{o[r]={};NIVELES.forEach(n=>{o[r][n]={secciones:[]}})});
+  return o;
+}
+function construirSeed(){
+  const base=estructuraVacia();
+  base.R1.L2.secciones=[
+    {id:"sec201",nombre:"Sección 201",archivo:"plano_201",valvulas:SEED_SECCIONES.sec201.valvulas},
+    {id:"sec209",nombre:"Sección 209",archivo:"plano_209",valvulas:SEED_SECCIONES.sec209.valvulas},
+    {id:"sec217",nombre:"Sección 217",archivo:"plano_217",valvulas:SEED_SECCIONES.sec217.valvulas}
+  ];
+  return base;
+}
+// Convierte el formato antiguo {sec201:{valvulas},...} a la jerarquía Riser→Nivel→Sección
+function migrar(d){
+  if(!d) return null;
+  if(d.R1 && d.R1.L2 && Array.isArray(d.R1.L2.secciones)) return d; // ya es v2
+  const base=estructuraVacia();
+  const meta={sec201:["Sección 201","plano_201"],sec209:["Sección 209","plano_209"],sec217:["Sección 217","plano_217"]};
+  Object.keys(meta).forEach(sid=>{
+    if(d[sid]&&Array.isArray(d[sid].valvulas)){
+      base.R1.L2.secciones.push({id:sid,nombre:meta[sid][0],archivo:meta[sid][1],valvulas:d[sid].valvulas});
+    }
+  });
+  return base;
+}
+
+let data = migrar(cargar(KEY_DATA)) || migrar(cargar(KEY_DATA_OLD)) || construirSeed();
+let planos = cargar(KEY_PLANOS) || {};
+let riserAct = "R1";
+let nivelAct = "L2";
+let secAct = null;
+let vistaResumen=false;
+let selId = null;
+let modoColocar = null;
+let modoAirblock = false;
+let filtroEstado = "todas";
+let zoom = 1;
+let autoIntentado = {};
+let gruposColapsados = new Set();
+
+normalizar();
+secAct = (secciones()[0]||{}).id || null;
+
+// ---- persistencia ----
+function cargar(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function normalizar(){
+  // garantiza la rejilla Riser×Nivel y campos nuevos sin perder datos existentes
+  RISERS.forEach(([r])=>{
+    if(!data[r])data[r]={};
+    NIVELES.forEach(n=>{
+      if(!data[r][n])data[r][n]={secciones:[]};
+      if(!Array.isArray(data[r][n].secciones))data[r][n].secciones=[];
+      data[r][n].secciones.forEach(s=>{
+        if(!s.id)s.id="s"+uid();
+        if(s.nombre===undefined)s.nombre="Sección";
+        if(s.archivo===undefined)s.archivo="";
+        if(![0,90,180,270].includes(s.rotacion))s.rotacion=0;
+        if(!Array.isArray(s.valvulas))s.valvulas=[];
+        s.valvulas.forEach(v=>{
+          if(v.marca===undefined)v.marca="";
+          if(v.fechaRevision===undefined)v.fechaRevision="";
+          if(v.responsable===undefined)v.responsable="";
+          if(v.notas===undefined)v.notas="";
+          if(!ESTADOS.includes(v.estado))v.estado="pendiente";
+        });
+      });
+    });
+  });
+}
+function guardar(){
+  try{
+    localStorage.setItem(KEY_DATA,JSON.stringify(data));
+    localStorage.setItem(KEY_PLANOS,JSON.stringify(planos));
+    const e=document.getElementById('estadoGuardado');e.textContent="Guardado ✓";e.style.background="rgba(255,255,255,.18)";
+  }catch(err){const e=document.getElementById('estadoGuardado');e.textContent="⚠ Sin guardar";e.style.background="rgba(0,0,0,.35)"}
+}
+function marcarRestaurado(){
+  const e=document.getElementById('estadoGuardado');
+  if(localStorage.getItem(KEY_DATA)){
+    const f=new Date().toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    e.textContent="Restaurado "+f;
+  }
+}
+function actualizarRespaldoBadge(){
+  const el=document.getElementById('estadoRespaldo');
+  const ult=localStorage.getItem(KEY_BK);
+  if(!ult){el.textContent="Sin respaldo aún";el.classList.add('alerta');return;}
+  const dias=Math.floor((Date.now()-Number(ult))/86400000);
+  el.textContent = dias<=0 ? "Respaldo: hoy" : "Respaldo: hace "+dias+"d";
+  el.classList.toggle('alerta', dias>=3);
+}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function secciones(){return (data[riserAct]&&data[riserAct][nivelAct])?data[riserAct][nivelAct].secciones:[]}
+function secActual(){return secciones().find(s=>s.id===secAct)||null}
+function valvs(){const s=secActual();return s?s.valvulas:[]}
+function todasValvs(){
+  let a=[];
+  RISERS.forEach(([r])=>NIVELES.forEach(n=>(data[r][n].secciones||[]).forEach(s=>
+    (s.valvulas||[]).forEach(v=>a.push({...v,_riser:r,_nivel:n,_sec:s.id,_secNom:s.nombre})))));
+  return a;
+}
+
+// ---- navegación: risers, niveles, secciones ----
+function totRiser(r){let t=0;NIVELES.forEach(n=>(data[r][n].secciones||[]).forEach(s=>t+=s.valvulas.length));return t}
+function totNivel(r,n){return (data[r][n].secciones||[]).reduce((a,s)=>a+s.valvulas.length,0)}
+function renderNav(){
+  document.getElementById('navRisers').innerHTML=RISERS.map(([r,nom])=>
+    `<button class="rchip ${(!vistaResumen&&r===riserAct)?'on':''}" onclick="cambiarRiser('${r}')">${nom} <span class="badge">${totRiser(r)}</span></button>`).join('');
+  document.getElementById('navNiveles').innerHTML=NIVELES.map(n=>
+    `<button class="nchip ${(!vistaResumen&&n===nivelAct)?'on':''}" onclick="cambiarNivel('${n}')">${n} <span class="badge">${totNivel(riserAct,n)}</span></button>`).join('');
+  document.getElementById('btnResumen').classList.toggle('activa',vistaResumen);
+}
+function renderTabs(){
+  const secs=secciones();
+  let h=secs.map(s=>
+    `<button class="tab ${(!vistaResumen&&s.id===secAct)?'activa':''}" onclick="cambiarSec('${s.id}')">${s.nombre} <span style="opacity:.7;font-weight:400">(${s.valvulas.length})</span></button>`).join('');
+  h+=`<button class="tab add" onclick="agregarSeccion()">＋ Sección</button>`;
+  if(!vistaResumen&&secActual()){
+    h+=`<button class="btn mini" style="margin-left:6px" onclick="editarSeccion()" title="Editar sección (nombre y archivo de plano)">✏</button>`;
+    h+=`<button class="btn mini" style="color:var(--cerrada);border-color:var(--cerrada)" onclick="eliminarSeccion()" title="Eliminar sección">🗑</button>`;
+  }
+  document.getElementById('tabs').innerHTML=h;
+}
+function cambiarRiser(r){vistaResumen=false;riserAct=r;trasCambioNivel()}
+function cambiarNivel(n){vistaResumen=false;nivelAct=n;trasCambioNivel()}
+function trasCambioNivel(){selId=null;modoColocar=null;filtroEstado="todas";zoom=1;document.getElementById('avisoColocar').classList.remove('on');secAct=(secciones()[0]||{}).id||null;render()}
+function cambiarSec(id){vistaResumen=false;secAct=id;selId=null;modoColocar=null;filtroEstado="todas";zoom=1;render()}
+function abrirResumen(){vistaResumen=true;selId=null;modoColocar=null;render()}
+function agregarSeccion(){
+  const nom=prompt("Nombre de la nueva sección (p. ej. Sección 305, Sala A, Pasillo Norte):","");
+  if(nom===null)return;
+  const id="s"+uid();
+  secciones().push({id,nombre:(nom.trim()||("Sección "+(secciones().length+1))),archivo:"",rotacion:0,valvulas:[]});
+  vistaResumen=false;secAct=id;selId=null;guardar();render();
+}
+function editarSeccion(){
+  const s=secActual();if(!s)return;
+  const nom=prompt("Nombre de la sección:",s.nombre);
+  if(nom===null)return;
+  s.nombre=nom.trim()||s.nombre;
+  const arch=prompt("Archivo de plano para auto-carga (nombre del fichero SIN extensión, p. ej. plano_R2_L1_305). Déjalo vacío si cargarás el plano a mano:",s.archivo||"");
+  if(arch!==null){
+    s.archivo=arch.trim();
+    if(s.archivo){delete autoIntentado[s.id];delete planos[s.id];}
+  }
+  guardar();render();
+}
+function eliminarSeccion(){
+  const s=secActual();if(!s)return;
+  if(!confirm(`¿Eliminar la sección "${s.nombre}" y sus ${s.valvulas.length} válvula(s)?`))return;
+  const arr=secciones();const i=arr.findIndex(x=>x.id===s.id);
+  if(i>=0)arr.splice(i,1);
+  delete planos[s.id];
+  secAct=(secciones()[0]||{}).id||null;selId=null;guardar();render();
+}
+
+function renderContadores(){
+  const cont=document.getElementById('contadores');
+  if(vistaResumen){cont.innerHTML="";return;}
+  const v=valvs();const c={abierta:0,cerrada:0,danada:0,pendiente:0};v.forEach(x=>c[x.estado]!==undefined&&c[x.estado]++);
+  cont.innerHTML=
+    `<span class="pill a">${c.abierta} ab.</span><span class="pill c">${c.cerrada} cer.</span><span class="pill d">${c.danada} dañ.</span><span class="pill p">${c.pendiente} pdte.</span>`;
+}
+
+// ---- lienzo / plano ----
+function autoCargarPlano(secId){
+  if(planos[secId]||autoIntentado[secId])return;
+  autoIntentado[secId]=true;
+  const s=secciones().find(x=>x.id===secId);
+  if(!s||!s.archivo)return;
+  const cands=[]; EXT.forEach(e=>cands.push(s.archivo+"."+e));
+  let i=0;
+  (function probar(){
+    if(i>=cands.length)return;
+    const url=cands[i++];const img=new Image();
+    img.onload=()=>{planos[secId]=url;guardar();if(secAct===secId&&!vistaResumen)renderLienzo()};
+    img.onerror=probar;
+    img.src=url;
+  })();
+}
+function renderLienzo(){
+  const l=document.getElementById('lienzo');
+  l.classList.toggle('placing', !!modoColocar||modoAirblock);
+  if(!secActual()){
+    l.style.width="";
+    l.innerHTML=`<div class="sin-plano"><b>No hay secciones en ${rNom(riserAct)} · ${nivelAct}</b>
+      <div>Pulsa <b>＋ Sección</b> (arriba) para crear una sección y después carga su plano.</div></div>`;
+    return;
+  }
+  if(!planos[secAct]){
+    autoCargarPlano(secAct);
+    l.style.width="";
+    l.innerHTML=`<div class="sin-plano"><b>Sin plano cargado en esta sección</b>
+      <div>Pulsa <b>📐 Cargar plano</b> y elige la imagen del plano.<br>
+      <small>Truco: nombra la imagen igual que el archivo de la sección (campo "Archivo plano") y se cargará sola.</small></div></div>`;
+    return;
+  }
+  l.style.width=(zoom*100)+"%";
+  const rot=secActual().rotacion||0;
+  let html=`<canvas id="planoCanvas" class="plano-canvas"></canvas>`;
+  valvs().forEach(v=>{
+    if(v.x==null||v.y==null)return;
+    const [dx,dy]=dispCoord(v.x,v.y,rot);
+    const ini=(v.codigo||"?").replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase();
+    html+=`<div class="marcador ${v.estado} ${v.id===selId?'sel':''}" data-id="${v.id}" style="left:${dx*100}%;top:${dy*100}%">
+      ${ini}<span class="tip">${v.codigo||''} · ${v.unidad||''} · ${ESTADO_LABEL[v.estado]||''}</span></div>`;
+  });
+  l.innerHTML=html;
+  const cv=document.getElementById('planoCanvas');
+  if(cv){dibujarPlano(cv,planos[secAct],rot);cv.addEventListener('click',clicEnPlano);}
+}
+// Coordenadas: se almacenan SIEMPRE en la orientación original (rot=0).
+// dispCoord = original -> vista rotada ; invCoord = vista rotada -> original
+function dispCoord(x,y,rot){
+  if(rot===90)return [1-y,x];
+  if(rot===180)return [1-x,1-y];
+  if(rot===270)return [y,1-x];
+  return [x,y];
+}
+function invCoord(du,dv,rot){
+  if(rot===90)return [dv,1-du];
+  if(rot===180)return [1-du,1-dv];
+  if(rot===270)return [1-dv,du];
+  return [du,dv];
+}
+const imgCache={};
+function dibujarPlano(cv,src,rot){
+  const cached=imgCache[src];
+  if(cached&&cached.complete&&cached.naturalWidth){pintarPlano(cv,cached,rot);return;}
+  let im=imgCache[src];
+  if(!im){im=new Image();imgCache[src]=im;im.onload=()=>{const c=document.getElementById('planoCanvas');if(c&&secAct&&planos[secAct]===src)pintarPlano(c,im,secActual()?(secActual().rotacion||0):0)};im.src=src;}
+}
+function pintarPlano(cv,img,rot){
+  const w=img.naturalWidth,h=img.naturalHeight;
+  if(rot===90||rot===270){cv.width=h;cv.height=w;}else{cv.width=w;cv.height=h;}
+  const ctx=cv.getContext('2d');
+  ctx.save();ctx.clearRect(0,0,cv.width,cv.height);
+  if(rot===90){ctx.translate(cv.width,0);ctx.rotate(Math.PI/2);}
+  else if(rot===180){ctx.translate(cv.width,cv.height);ctx.rotate(Math.PI);}
+  else if(rot===270){ctx.translate(0,cv.height);ctx.rotate(-Math.PI/2);}
+  ctx.drawImage(img,0,0,w,h);
+  ctx.restore();
+}
+function rotarPlano(dir){
+  const s=secActual();
+  if(!s){alert("No hay ninguna sección seleccionada.");return}
+  if(!planos[secAct]){alert("Primero carga el plano de esta sección.");return}
+  s.rotacion=((((s.rotacion||0)+(dir||90))%360)+360)%360;
+  zoom=1;guardar();render();
+}
+// ---- airblock: 5 válvulas estándar con un toque ----
+// Offsets en espacio de PANTALLA (fracción de la imagen mostrada) respecto al punto tocado.
+const PLANTILLA_DEFAULT=[
+  {codigo:"R-A PPR63",   circuito:"Retorno A",   tipo:"Bola",          dn:"DN63", ox:0,     oy:-0.035},
+  {codigo:"R-B PPR63",   circuito:"Retorno B",   tipo:"Bola",          dn:"DN63", ox:0,     oy:-0.018},
+  {codigo:"S-B PPR63",   circuito:"Suministro B",tipo:"Bola",          dn:"DN63", ox:0,     oy: 0.018},
+  {codigo:"S-A PPR63",   circuito:"Suministro A",tipo:"Bola",          dn:"DN63", ox:0,     oy: 0.035},
+  {codigo:"PPR63 BELIMO",circuito:"Principal",   tipo:"Electroválvula",dn:"DN63", ox:-0.12, oy:-0.02}
+];
+const KEY_PLANTILLA="cpd_airblock_plantilla";
+let plantilla = cargar(KEY_PLANTILLA) || JSON.parse(JSON.stringify(PLANTILLA_DEFAULT));
+function guardarPlantilla(){try{localStorage.setItem(KEY_PLANTILLA,JSON.stringify(plantilla))}catch(e){}}
+function sugerirUnidad(){
+  const vistas=[],seen={};
+  valvs().forEach(v=>{if(v.unidad&&!seen[v.unidad]){seen[v.unidad]=1;vistas.push(v.unidad)}});
+  const nums=vistas.map(s=>{const m=s.match(/^(.*?)(\d+)$/);return m?{pre:m[1],n:parseInt(m[2],10),len:m[2].length}:null}).filter(Boolean);
+  if(!nums.length)return "DH1.";
+  const last=nums[nums.length-1];
+  let step=1;
+  if(nums.length>=2){const d=last.n-nums[nums.length-2].n;if(d>0)step=d;}
+  return last.pre+String(last.n+step).padStart(last.len,"0");
+}
+function crearAirblock(du,dv){
+  const s=secActual();if(!s)return;
+  const rot=s.rotacion||0;
+  const unidad=prompt("Nombre del airblock (unidad):",sugerirUnidad());
+  if(unidad===null)return;
+  const u=unidad.trim();
+  const cl=v=>Math.min(1,Math.max(0,v));
+  let ultimo=null;
+  (plantilla.length?plantilla:PLANTILLA_DEFAULT).forEach(t=>{
+    const [x,y]=invCoord(cl(du+(+t.ox||0)),cl(dv+(+t.oy||0)),rot);
+    const nv={id:uid(),codigo:t.codigo||"",unidad:u,tipo:t.tipo||"Bola",circuito:t.circuito||"",dn:t.dn||"",
+      estado:"pendiente",marca:"",fechaRevision:"",responsable:"",x,y,notas:""};
+    s.valvulas.push(nv);ultimo=nv.id;
+  });
+  selId=ultimo;guardar();render();
+}
+// Captura la disposición real de un airblock colocado en el plano como plantilla
+function plantillaDesdeValvula(id){
+  const ref=valvs().find(z=>z.id===id); if(!ref)return;
+  if(!ref.unidad){alert("Esta válvula no tiene unidad (airblock) asignada.");return}
+  const rot=secActual()?(secActual().rotacion||0):0;
+  const grupo=valvs().filter(v=>v.unidad===ref.unidad && v.x!=null && v.y!=null);
+  if(grupo.length<2){alert("Coloca en el plano al menos 2 válvulas del airblock \""+ref.unidad+"\" (arrastrándolas) antes de guardar la plantilla.");return}
+  const pts=grupo.map(v=>{const [du,dv]=dispCoord(v.x,v.y,rot);return {v,du,dv}});
+  const cx=pts.reduce((a,p)=>a+p.du,0)/pts.length, cy=pts.reduce((a,p)=>a+p.dv,0)/pts.length;
+  if(!confirm(`Usar la disposición de "${ref.unidad}" (${grupo.length} válvulas) como plantilla de airblock? Sustituirá la plantilla actual.`))return;
+  plantilla=pts.map(p=>({codigo:p.v.codigo,circuito:p.v.circuito,tipo:p.v.tipo,dn:p.v.dn,ox:+(p.du-cx).toFixed(4),oy:+(p.dv-cy).toFixed(4)}));
+  guardarPlantilla();
+  alert("Plantilla guardada con "+plantilla.length+" válvulas a partir de \""+ref.unidad+"\". Al sellar un airblock, toca donde irá su centro.");
+}
+function setModoAirblock(on){
+  modoAirblock=on; if(on)modoColocar=null;
+  const av=document.getElementById('avisoColocar');
+  av.textContent="Toca el centro de cada airblock para crear sus 5 válvulas (Esc para terminar)…";
+  av.classList.toggle('on',on);
+  const b=document.getElementById('btnAirblock'); if(b)b.classList.toggle('primario',on);
+  renderLienzo();
+}
+// ---- editor de plantilla ----
+let plTmp=null;
+function abrirPlantilla(){
+  plTmp=JSON.parse(JSON.stringify(plantilla.length?plantilla:PLANTILLA_DEFAULT));
+  document.getElementById('plantillaModal').style.display='flex';
+  renderPlantillaEditor();
+}
+function cerrarPlantilla(){document.getElementById('plantillaModal').style.display='none';plTmp=null;}
+function renderPlantillaEditor(){
+  // vista previa
+  const prev=document.getElementById('plantillaPreview');
+  const ESC=130; // px por unidad de offset 1.0 (para que ±0.2 ≈ ±26px… usamos escala visible)
+  const SC=320;  // escala: offset 0.1 -> 32px
+  let ph='<div class="centro"></div>';
+  plTmp.forEach((t,i)=>{
+    const cx=95+(+t.ox||0)*SC, cy=95+(+t.oy||0)*SC;
+    const col=(t.tipo==='Electroválvula')?'var(--danada)':'var(--abierta)';
+    const ini=(t.codigo||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase();
+    ph+=`<div class="pt" style="left:${Math.min(182,Math.max(8,cx))}px;top:${Math.min(182,Math.max(8,cy))}px;background:${col}" title="${(t.codigo||'')}">${ini}</div>`;
+  });
+  prev.innerHTML=ph;
+  // filas
+  const tiposOpts=TIPOS.map(o=>`<option value="${o}">${o}</option>`).join('');
+  let fh='';
+  plTmp.forEach((t,i)=>{
+    fh+=`<div class="pl-fila">
+      <div class="pl-c cod"><label>Código</label><input data-i="${i}" data-k="codigo" value="${(t.codigo||'').replace(/"/g,'&quot;')}"></div>
+      <div class="pl-c cir"><label>Circuito</label><input data-i="${i}" data-k="circuito" value="${(t.circuito||'').replace(/"/g,'&quot;')}"></div>
+      <div class="pl-c tipo"><label>Tipo</label><select data-i="${i}" data-k="tipo">${tiposOpts}</select></div>
+      <div class="pl-c dn"><label>DN</label><input data-i="${i}" data-k="dn" value="${(t.dn||'').replace(/"/g,'&quot;')}"></div>
+      <div class="pl-c num"><label>X %</label><input type="number" step="0.5" data-i="${i}" data-k="ox" value="${(((+t.ox||0)*100)).toFixed(1)}"></div>
+      <div class="pl-c num"><label>Y %</label><input type="number" step="0.5" data-i="${i}" data-k="oy" value="${(((+t.oy||0)*100)).toFixed(1)}"></div>
+      <button class="pl-del" data-del="${i}" title="Eliminar">🗑</button>
+    </div>`;
+  });
+  const cont=document.getElementById('plantillaFilas');
+  cont.innerHTML=fh||'<div class="vacio-lista">Sin válvulas. Añade al menos una.</div>';
+  cont.querySelectorAll('select[data-k="tipo"]').forEach(sel=>{sel.value=plTmp[+sel.dataset.i].tipo||'Bola';});
+  cont.querySelectorAll('[data-k]').forEach(el=>{
+    el.addEventListener('input',()=>{
+      const i=+el.dataset.i,k=el.dataset.k;
+      if(k==='ox'||k==='oy'){plTmp[i][k]=(parseFloat(el.value)||0)/100;renderPlantillaPreviewOnly();}
+      else plTmp[i][k]=el.value;
+      if(k==='codigo'||k==='tipo')renderPlantillaPreviewOnly();
+    });
+  });
+  cont.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{plTmp.splice(+b.dataset.del,1);renderPlantillaEditor();}));
+}
+function renderPlantillaPreviewOnly(){
+  const prev=document.getElementById('plantillaPreview');const SC=320;
+  let ph='<div class="centro"></div>';
+  plTmp.forEach(t=>{
+    const cx=95+(+t.ox||0)*SC, cy=95+(+t.oy||0)*SC;
+    const col=(t.tipo==='Electroválvula')?'var(--danada)':'var(--abierta)';
+    const ini=(t.codigo||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase();
+    ph+=`<div class="pt" style="left:${Math.min(182,Math.max(8,cx))}px;top:${Math.min(182,Math.max(8,cy))}px;background:${col}">${ini}</div>`;
+  });
+  prev.innerHTML=ph;
+}
+function clicEnPlano(e){
+  if(arrastrando)return;
+  const cv=e.currentTarget;const r=cv.getBoundingClientRect();
+  const du=(e.clientX-r.left)/r.width, dv=(e.clientY-r.top)/r.height;
+  const rot=secActual()?(secActual().rotacion||0):0;
+  if(modoAirblock){crearAirblock(du,dv);return;}
+  const [x,y]=invCoord(du,dv,rot);
+  if(modoColocar){
+    const v=valvs().find(z=>z.id===modoColocar);
+    if(v){v.x=x;v.y=y;modoColocar=null;document.getElementById('avisoColocar').classList.remove('on');selId=v.id;guardar();render()}
+    return;
+  }
+  const nv={id:uid(),codigo:"NUEVA",unidad:"",tipo:"Bola",circuito:"",dn:"DN63",estado:"pendiente",marca:"",fechaRevision:"",responsable:"",x,y,notas:""};
+  valvs().push(nv);selId=nv.id;guardar();render();
+}
+function seleccionar(id,e){if(e)e.stopPropagation();selId=id;modoColocar=null;render()}
+
+// ---- zoom & pan ----
+let arrastrando=false;
+function setZoom(z,cx,cy){
+  const wrap=document.getElementById('lienzoWrap');
+  z=Math.max(1,Math.min(6,z));
+  const prevW=wrap.scrollWidth, prevH=wrap.scrollHeight;
+  const px=(wrap.scrollLeft+(cx??wrap.clientWidth/2))/Math.max(prevW,1);
+  const py=(wrap.scrollTop+(cy??wrap.clientHeight/2))/Math.max(prevH,1);
+  zoom=z;
+  const l=document.getElementById('lienzo'); if(planos[secAct]) l.style.width=(zoom*100)+"%";
+  document.getElementById('zNivel').textContent=Math.round(zoom*100)+"%";
+  requestAnimationFrame(()=>{
+    const nW=wrap.scrollWidth,nH=wrap.scrollHeight;
+    wrap.scrollLeft=px*nW-(cx??wrap.clientWidth/2);
+    wrap.scrollTop=py*nH-(cy??wrap.clientHeight/2);
+  });
+}
+function initPanZoom(){
+  const wrap=document.getElementById('lienzoWrap');
+  document.getElementById('zMas').onclick=()=>setZoom(zoom+0.5);
+  document.getElementById('zMenos').onclick=()=>setZoom(zoom-0.5);
+  document.getElementById('zReset').onclick=()=>setZoom(1);
+  document.getElementById('rotCW').onclick=()=>rotarPlano(90);
+  document.getElementById('rotCCW').onclick=()=>rotarPlano(-90);
+  wrap.addEventListener('wheel',e=>{
+    if(!planos[secAct])return;
+    e.preventDefault();
+    const r=wrap.getBoundingClientRect();
+    setZoom(zoom*(e.deltaY<0?1.15:0.87), e.clientX-r.left, e.clientY-r.top);
+  },{passive:false});
+  let sx,sy,sl,st,downX,downY,panning=false;
+  let dragId=null,dragMoved=false,dragEl=null;
+  function dispDeCanvas(clientX,clientY){
+    const cv=document.getElementById('planoCanvas'); if(!cv)return null;
+    const r=cv.getBoundingClientRect();
+    return [Math.min(1,Math.max(0,(clientX-r.left)/r.width)),Math.min(1,Math.max(0,(clientY-r.top)/r.height))];
+  }
+  wrap.addEventListener('pointerdown',e=>{
+    const mk=e.target.closest('.marcador');
+    if(mk && !modoColocar && !modoAirblock){
+      dragId=mk.dataset.id;dragMoved=false;dragEl=mk;downX=e.clientX;downY=e.clientY;e.preventDefault();return;
+    }
+    if(mk||e.target.closest('.zoom-ctrl'))return;
+    if(modoColocar||modoAirblock)return;
+    panning=true;arrastrando=false;sx=e.clientX;sy=e.clientY;downX=e.clientX;downY=e.clientY;
+    sl=wrap.scrollLeft;st=wrap.scrollTop;
+  });
+  wrap.addEventListener('pointermove',e=>{
+    if(dragId){
+      if(!dragMoved && Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>4){dragMoved=true;if(dragEl)dragEl.classList.add('arrastrando');}
+      if(dragMoved){const d=dispDeCanvas(e.clientX,e.clientY);if(d&&dragEl){dragEl.style.left=(d[0]*100)+'%';dragEl.style.top=(d[1]*100)+'%';}}
+      return;
+    }
+    if(!panning)return;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>6){arrastrando=true;wrap.style.cursor='grabbing';}
+    if(arrastrando){wrap.scrollLeft=sl-dx;wrap.scrollTop=st-dy;}
+  });
+  window.addEventListener('pointerup',e=>{
+    if(dragId){
+      const id=dragId,moved=dragMoved;
+      if(dragEl)dragEl.classList.remove('arrastrando');
+      dragId=null;dragMoved=false;dragEl=null;
+      if(moved){
+        const d=dispDeCanvas(e.clientX,e.clientY);const v=valvs().find(z=>z.id===id);
+        if(v&&d){const rot=secActual()?(secActual().rotacion||0):0;const [x,y]=invCoord(d[0],d[1],rot);v.x=x;v.y=y;selId=id;guardar();render();}
+        else render();
+      }else{seleccionar(id);}
+      return;
+    }
+    panning=false;wrap.style.cursor='';setTimeout(()=>arrastrando=false,30);
+  });
+}
+
+// ---- panel lateral ----
+function renderPanel(){
+  const cont=document.getElementById('panelScroll');
+  const cerrar=document.getElementById('cerrarEdit');
+  const v=valvs().find(z=>z.id===selId);
+  if(v){
+    document.getElementById('panelTitulo').textContent="Editar válvula";
+    cerrar.style.display="inline";cerrar.onclick=()=>{selId=null;render()};
+    cont.innerHTML=`
+      ${campo('Código','codigo','input')}
+      <div class="campo-row">${campo('Unidad','unidad','input')}${campo('DN','dn','input')}</div>
+      <div class="campo-row">${campo('Tipo','tipo','select',TIPOS)}${campo('Estado','estado','select',ESTADOS)}</div>
+      ${campo('Circuito','circuito','input')}
+      <div class="campo-row">${campo('Marca','marca','input')}${campo('Últ. revisión','fechaRevision','date')}</div>
+      ${campo('Responsable','responsable','input')}
+      ${campo('Notas','notas','textarea')}
+      <div class="acciones-edit">
+        ${v.x==null?`<button class="btn primario" onclick="iniciarColocar('${v.id}')">📍 Colocar en plano</button>`
+                   :`<button class="btn" onclick="quitarPlano('${v.id}')">↩ Quitar del plano</button>`}
+        <button class="btn" style="color:var(--cerrada);border-color:var(--cerrada)" onclick="eliminar('${v.id}')">🗑 Eliminar</button>
+      </div>
+      ${v.unidad?`<div class="acciones-edit"><button class="btn" style="width:100%" onclick="plantillaDesdeValvula('${v.id}')" title="Captura la disposición de este airblock (las válvulas que comparten esta unidad) como plantilla">🧊 Guardar este airblock como plantilla</button></div>`:''}
+      <div style="font-size:11px;color:var(--gris);margin-top:6px">💡 Puedes <b>arrastrar</b> los marcadores sobre el plano para recolocarlos.</div>`;
+    cont.querySelectorAll('[data-f]').forEach(el=>{
+      const f=el.dataset.f;
+      if(el.tagName==='SELECT'){
+        el.value=v[f]??"";
+      }else el.value=v[f]??"";
+      el.addEventListener('input',()=>{v[f]=el.value;guardar();renderLienzo();renderContadores();renderTabs()});
+    });
+  }else{
+    document.getElementById('panelTitulo').textContent="Válvulas de la sección";
+    cerrar.style.display="none";
+    const v2=valvs();
+    const q=(document.getElementById('q')?.value||"").toLowerCase();
+    const fEst=x=>filtroEstado==="todas"||x.estado===filtroEstado;
+    const fTxt=x=>!q||((x.codigo||"")+" "+(x.unidad||"")+" "+(x.circuito||"")+" "+(x.marca||"")+" "+(x.responsable||"")).toLowerCase().includes(q);
+    const filt=x=>fEst(x)&&fTxt(x);
+    const cnt={todas:v2.length,abierta:0,cerrada:0,danada:0,pendiente:0};v2.forEach(x=>cnt[x.estado]!==undefined&&cnt[x.estado]++);
+    const chip=(id,lab)=>`<span class="fchip ${filtroEstado===id?'on '+id:''}" onclick="setFiltro('${id}')">${lab} (${cnt[id]})</span>`;
+    // Agrupar por airblock (campo "unidad"), conservando el orden de aparición
+    const orden=[], grupos={};
+    v2.forEach(v=>{const k=v.unidad||''; if(!grupos[k]){grupos[k]=[];orden.push(k);} grupos[k].push(v);});
+    let listHtml='';
+    orden.forEach(k=>{
+      const todas=grupos[k];
+      const vis=todas.filter(filt).sort((a,b)=>(a.x==null)-(b.x==null)); // colocadas primero
+      if(!vis.length)return;
+      const cc={abierta:0,cerrada:0,danada:0,pendiente:0};todas.forEach(x=>cc[x.estado]!==undefined&&cc[x.estado]++);
+      const tot=todas.length||1, sinCol=todas.filter(x=>x.x==null).length;
+      const key=secAct+'|'+k, colap=gruposColapsados.has(key), nom=k||'Sin airblock';
+      const mb=`<span class="ab-bar"><i style="width:${cc.abierta/tot*100}%;background:var(--abierta)"></i><i style="width:${cc.cerrada/tot*100}%;background:var(--cerrada)"></i><i style="width:${cc.danada/tot*100}%;background:var(--danada)"></i><i style="width:${cc.pendiente/tot*100}%;background:var(--pendiente)"></i></span>`;
+      listHtml+=`<div class="ab-grupo">
+        <div class="ab-cab ${colap?'colap':''}" onclick="toggleGrupo('${encodeURIComponent(key)}')">
+          <span class="ab-caret">▾</span>
+          <span class="ab-nom">${nom}</span>
+          <span class="ab-cnt">${vis.length}${vis.length!==todas.length?'/'+todas.length:''}</span>
+          ${mb}
+          ${sinCol?`<span class="ab-sc">${sinCol} sin colocar</span>`:''}
+        </div>
+        <div class="ab-items" ${colap?'style="display:none"':''}>${vis.map(item).join('')}</div>
+      </div>`;
+    });
+    if(!listHtml)listHtml='<div class="vacio-lista">No hay válvulas que coincidan con el filtro.</div>';
+    cont.innerHTML=`<input class="buscador" id="q" placeholder="Buscar código, unidad, marca…" oninput="renderPanel()" value="${q}">`+
+      `<div class="filtros">${chip('todas','Todas')}${chip('abierta','Abiertas')}${chip('cerrada','Cerradas')}${chip('danada','Dañadas')}${chip('pendiente','Pdtes.')}</div>`+
+      `<div class="ab-acciones"><button class="btn mini" onclick="colapsarTodos(true)">▸ Plegar todo</button><button class="btn mini" onclick="colapsarTodos(false)">▾ Desplegar todo</button></div>`+
+      listHtml;
+    setTimeout(()=>{const q2=document.getElementById('q');if(q2&&q){q2.focus();q2.setSelectionRange(q.length,q.length)}},0);
+  }
+}
+function setFiltro(id){filtroEstado=id;renderPanel()}
+function toggleGrupo(enc){const key=decodeURIComponent(enc);if(gruposColapsados.has(key))gruposColapsados.delete(key);else gruposColapsados.add(key);renderPanel()}
+function colapsarTodos(plegar){
+  const keys=new Set();valvs().forEach(v=>keys.add(secAct+'|'+(v.unidad||'')));
+  keys.forEach(k=>{plegar?gruposColapsados.add(k):gruposColapsados.delete(k)});
+  renderPanel();
+}
+function item(v){
+  const sc=v.x==null?`<span class="tag-sc">sin colocar</span>`:'';
+  const meta=[v.circuito,v.tipo,v.dn,v.marca].filter(Boolean).join(' · ');
+  return `<div class="lista-item ${v.id===selId?'sel':''}" onclick="seleccionar('${v.id}')">
+    <span class="punto ${v.estado}"></span>
+    <div style="flex:1"><div class="cod">${v.codigo||'(sin código)'}${sc}</div>
+    <div class="meta">${meta}</div></div></div>`;
+}
+function campo(lab,f,tipo,ops){
+  if(tipo==='select')return `<div class="campo"><label>${lab}</label><select data-f="${f}">${ops.map(o=>`<option value="${o}">${ESTADO_LABEL[o]||o}</option>`).join('')}</select></div>`;
+  if(tipo==='textarea')return `<div class="campo"><label>${lab}</label><textarea data-f="${f}"></textarea></div>`;
+  if(tipo==='date')return `<div class="campo"><label>${lab}</label><input type="date" data-f="${f}"></div>`;
+  return `<div class="campo"><label>${lab}</label><input data-f="${f}"></div>`;
+}
+function iniciarColocar(id){
+  if(!planos[secAct]){alert("Primero carga el plano de esta sección.");return}
+  if(modoAirblock)setModoAirblock(false);
+  modoColocar=id;
+  const av=document.getElementById('avisoColocar');
+  av.textContent="Toca en el plano dónde va la válvula… (puedes hacer zoom para más precisión)";
+  av.classList.add('on');renderLienzo();
+}
+function quitarPlano(id){const v=valvs().find(z=>z.id===id);if(v){v.x=null;v.y=null;guardar();render()}}
+function eliminar(id){if(!confirm("¿Eliminar esta válvula?"))return;const s=secActual();if(s)s.valvulas=valvs().filter(z=>z.id!==id);selId=null;guardar();render()}
+
+// ---- resumen ----
+function renderResumen(){
+  const w=document.getElementById('resumenWrap');
+  const all=todasValvs();
+  const c={abierta:0,cerrada:0,danada:0,pendiente:0};all.forEach(v=>c[v.estado]!==undefined&&c[v.estado]++);
+  const colocadas=all.filter(v=>v.x!=null).length;
+  const pct=all.length?Math.round(colocadas/all.length*100):0;
+  const tipos={};all.forEach(v=>tipos[v.tipo||'—']=(tipos[v.tipo||'—']||0)+1);
+  const barra=cc=>{const tot=(cc.abierta+cc.cerrada+cc.danada+cc.pendiente)||1;
+    return `<div class="barra">
+      <i style="width:${cc.abierta/tot*100}%;background:var(--abierta)"></i>
+      <i style="width:${cc.cerrada/tot*100}%;background:var(--cerrada)"></i>
+      <i style="width:${cc.danada/tot*100}%;background:var(--danada)"></i>
+      <i style="width:${cc.pendiente/tot*100}%;background:var(--pendiente)"></i></div>`;};
+  const cuenta=vs=>{const cc={abierta:0,cerrada:0,danada:0,pendiente:0};vs.forEach(v=>cc[v.estado]!==undefined&&cc[v.estado]++);return cc;};
+  // por Riser
+  let porRiser=RISERS.map(([r,rn])=>{
+    let vs=[];NIVELES.forEach(n=>(data[r][n].secciones||[]).forEach(s=>vs=vs.concat(s.valvulas)));
+    const cc=cuenta(vs);
+    return `<tr><td><b>${rn}</b></td><td>${vs.length}</td><td>${barra(cc)}</td>
+      <td style="white-space:nowrap">${cc.abierta}/${cc.cerrada}/${cc.danada}/${cc.pendiente}</td></tr>`;
+  }).join('');
+  // por Riser · Nivel · Sección (solo con válvulas)
+  let porSec="";
+  RISERS.forEach(([r,rn])=>NIVELES.forEach(n=>(data[r][n].secciones||[]).forEach(s=>{
+    const vs=s.valvulas||[];if(!vs.length)return;
+    const cc=cuenta(vs);
+    porSec+=`<tr><td><b>${rn}</b></td><td>${n}</td><td>${s.nombre}</td><td>${vs.length}</td>
+      <td>${barra(cc)}</td>
+      <td style="white-space:nowrap">${cc.abierta}/${cc.cerrada}/${cc.danada}/${cc.pendiente}</td></tr>`;
+  })));
+  if(!porSec)porSec=`<tr><td colspan="6" style="color:var(--gris)">Aún no hay válvulas registradas.</td></tr>`;
+  const atencion=all.filter(v=>v.estado==='danada'||v.estado==='cerrada')
+    .sort((a,b)=>(a.estado>b.estado?1:-1));
+  let filasAt=atencion.map(v=>`<tr>
+      <td>${v.codigo||''}</td><td>${v.unidad||''}</td><td>${rNom(v._riser)} · ${v._nivel} · ${v._secNom}</td>
+      <td><span class="tag-est ${v.estado}">${ESTADO_LABEL[v.estado]}</span></td>
+      <td>${v.notas||''}</td></tr>`).join('') || `<tr><td colspan="5" style="color:var(--gris)">Sin válvulas dañadas o cerradas 🎉</td></tr>`;
+  let tipoRows=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<tr><td>${t}</td><td>${n}</td></tr>`).join('');
+  w.innerHTML=`
+    <div class="res-grid">
+      <div class="res-card"><div class="num">${all.length}</div><div class="lab">Total válvulas</div></div>
+      <div class="res-card a"><div class="num">${c.abierta}</div><div class="lab">Abiertas</div></div>
+      <div class="res-card c"><div class="num">${c.cerrada}</div><div class="lab">Cerradas</div></div>
+      <div class="res-card d"><div class="num">${c.danada}</div><div class="lab">Dañadas</div></div>
+      <div class="res-card p"><div class="num">${c.pendiente}</div><div class="lab">Pendientes</div></div>
+      <div class="res-card"><div class="num">${pct}%</div><div class="lab">Colocadas (${colocadas}/${all.length})</div></div>
+    </div>
+    <div class="res-bloque">
+      <h3>Por Riser</h3>
+      <table class="res-tabla"><thead><tr><th>Riser</th><th>Total</th><th>Distribución</th><th>Ab/Ce/Da/Pe</th></tr></thead>
+      <tbody>${porRiser}</tbody></table>
+    </div>
+    <div class="res-bloque">
+      <h3>Por sección</h3>
+      <table class="res-tabla"><thead><tr><th>Riser</th><th>Nivel</th><th>Sección</th><th>Total</th><th>Distribución</th><th>Ab/Ce/Da/Pe</th></tr></thead>
+      <tbody>${porSec}</tbody></table>
+    </div>
+    <div class="res-bloque">
+      <h3>⚠ Requieren atención (dañadas y cerradas)</h3>
+      <table class="res-tabla"><thead><tr><th>Código</th><th>Unidad</th><th>Ubicación</th><th>Estado</th><th>Notas</th></tr></thead>
+      <tbody>${filasAt}</tbody></table>
+    </div>
+    <div class="res-bloque">
+      <h3>Inventario por tipo de válvula</h3>
+      <table class="res-tabla"><thead><tr><th>Tipo</th><th>Cantidad</th></tr></thead><tbody>${tipoRows}</tbody></table>
+    </div>
+    <button class="btn primario" onclick="exportarCSV(true)">📄 Exportar inventario completo (CSV)</button>`;
+}
+
+// ---- exportar ----
+function exportarCSV(global){
+  let filas;
+  if(global){filas=todasValvs();}
+  else{const s=secActual();filas=(s?s.valvulas:[]).map(v=>({...v,_riser:riserAct,_nivel:nivelAct,_secNom:s?s.nombre:""}));}
+  const head=["Riser","Nivel","Sección","Código","Unidad","Tipo","Circuito","DN","Estado","Marca","Última revisión","Responsable","Colocada","X","Y","Notas"];
+  const esc=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+  let csv=head.join(";")+"\n";
+  filas.forEach(v=>{
+    csv+=[rNom(v._riser),v._nivel,v._secNom,v.codigo,v.unidad,v.tipo,v.circuito,v.dn,ESTADO_LABEL[v.estado]||v.estado,
+      v.marca,v.fechaRevision,v.responsable,(v.x!=null?"Sí":"No"),
+      v.x!=null?v.x.toFixed(4):"",v.y!=null?v.y.toFixed(4):"",v.notas].map(esc).join(";")+"\n";
+  });
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const fecha=new Date().toISOString().slice(0,10);
+  a.download=(global?"inventario_valvulas_":"valvulas_"+riserAct+"_"+nivelAct+"_")+fecha+".csv";a.click();
+}
+document.getElementById('btnCSV').addEventListener('click',()=>exportarCSV(vistaResumen));
+document.getElementById('filePlano').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(!secActual()){alert("Primero crea o selecciona una sección (botón ＋ Sección).");e.target.value="";return}
+  const r=new FileReader();r.onload=()=>{planos[secAct]=r.result;guardar();render()};r.readAsDataURL(f);
+  e.target.value="";
+});
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const fecha=new Date().toISOString().slice(0,10);
+  a.download=`valvulas_respaldo_${fecha}.json`;a.click();
+  localStorage.setItem(KEY_BK,String(Date.now()));actualizarRespaldoBadge();
+});
+document.getElementById('fileImport').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const imp=JSON.parse(r.result);
+    if(!confirm("Esto reemplazará las válvulas actuales por las del respaldo. ¿Continuar?"))return;
+    data=migrar(imp)||imp;normalizar();
+    riserAct="R1";nivelAct="L2";secAct=(secciones()[0]||{}).id||null;selId=null;guardar();render();
+  }catch(err){alert("El archivo no es un respaldo válido.")}};
+  r.readAsText(f);e.target.value="";
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){
+  if(document.getElementById('plantillaModal').style.display==='flex'){cerrarPlantilla();return}
+  selId=null;modoColocar=null;modoAirblock=false;const b=document.getElementById('btnAirblock');if(b)b.classList.remove('primario');document.getElementById('avisoColocar').classList.remove('on');render()}});
+document.getElementById('btnAirblock').addEventListener('click',()=>{
+  if(!secActual()){alert("Crea o selecciona una sección primero.");return}
+  if(!planos[secAct]){alert("Primero carga el plano de esta sección.");return}
+  setModoAirblock(!modoAirblock);
+});
+document.getElementById('btnPlantilla').addEventListener('click',abrirPlantilla);
+document.getElementById('plantillaX').addEventListener('click',cerrarPlantilla);
+document.getElementById('plantillaModal').addEventListener('click',e=>{if(e.target.id==='plantillaModal')cerrarPlantilla();});
+document.getElementById('plantillaAdd').addEventListener('click',()=>{plTmp.push({codigo:"NUEVA",circuito:"",tipo:"Bola",dn:"DN63",ox:0,oy:0});renderPlantillaEditor();});
+document.getElementById('plantillaReset').addEventListener('click',()=>{if(!confirm("¿Restaurar la plantilla por defecto (5 válvulas)?"))return;plTmp=JSON.parse(JSON.stringify(PLANTILLA_DEFAULT));renderPlantillaEditor();});
+document.getElementById('plantillaGuardar').addEventListener('click',()=>{
+  if(!plTmp.length){alert("La plantilla debe tener al menos una válvula.");return}
+  plantilla=JSON.parse(JSON.stringify(plTmp));guardarPlantilla();cerrarPlantilla();
+  alert("Plantilla guardada. Se usará al sellar airblocks 🧊");
+});
+
+// ---- render principal ----
+function render(){
+  renderNav();
+  renderTabs();
+  document.getElementById('cuerpo').style.display = vistaResumen?'none':'flex';
+  document.getElementById('resumenWrap').style.display = vistaResumen?'block':'none';
+  if(vistaResumen){renderResumen();renderContadores();return;}
+  renderContadores();renderLienzo();renderPanel();
+  document.getElementById('zNivel').textContent=Math.round(zoom*100)+"%";
+}
+initPanZoom();
+marcarRestaurado();
+actualizarRespaldoBadge();
+render();
+</script>
+<script>
+// Registro del service worker (modo app / offline)
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
