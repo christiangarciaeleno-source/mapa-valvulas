@@ -1,0 +1,6 @@
+# Base de datos local de sincronización (datos reales de obra, no se sube)
+db/*.sqlite
+db/*.sqlite-journal
+
+# Respaldos JSON reales de Veridar (contienen datos confidenciales)
+*respaldo*.json

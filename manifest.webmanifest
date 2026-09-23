@@ -1,7 +1,7 @@
 {
-  "name": "Mapa de Válvulas — CPD | serveo",
-  "short_name": "Válvulas CPD",
-  "description": "Control de válvulas de los circuitos de glicol del CPD",
+  "name": "Veridar — Commissioning Edificio 2",
+  "short_name": "Veridar",
+  "description": "Recodificación y commissioning de instalaciones del Edificio 2",
   "lang": "es",
   "start_url": "./index.html",
   "scope": "./",
