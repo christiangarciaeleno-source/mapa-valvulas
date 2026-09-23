@@ -105,3 +105,21 @@ Al tocar este script, mantén las mismas reglas que la app:
 - los conflictos por `id` se resuelven por `mod` más reciente, igual que la
   fusión dentro de Veridar;
 - no añadir ninguna llamada de red.
+
+## Instrucciones específicas y agente dedicado
+
+Este archivo es la guía general. Además hay:
+
+- `.github/instructions/veridar-app.instructions.md` — reglas que se
+  aplican solo al editar `index.html`.
+- `.github/instructions/sync-tool.instructions.md` — reglas que se aplican
+  solo al editar `db/**`.
+- `.github/chatmodes/veridar-sync.chatmode.md` — un chat mode de Copilot
+  (**"veridar-sync"**, seleccionable en Copilot Chat) especializado en
+  mantener alineados el modelo de datos de Veridar y la sincronización
+  local; úsalo para cualquier tarea que toque datos, esquema o
+  sincronización.
+
+Si cambias el modelo de datos en un lugar, estos archivos son los que hay
+que revisar para que todo — app, sincronización y documentación — se
+mantenga alineado.
